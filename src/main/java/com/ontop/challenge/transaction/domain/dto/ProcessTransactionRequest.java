@@ -3,8 +3,10 @@ package com.ontop.challenge.transaction.domain.dto;
 import lombok.Builder;
 import lombok.Data;
 
+@Data
 public class ProcessTransactionRequest {
 
+    private Integer idUser;
     private Source source;
     private Destination destination;
 
@@ -22,7 +24,6 @@ public class ProcessTransactionRequest {
     public static class Destination{
         private String firstName;
         private String lastName;
-        private String nationalIdentificationNumber;
         private Account account;
 
     }
@@ -38,5 +39,6 @@ public class ProcessTransactionRequest {
     @Builder
     public static class SourceInformation{
         private String name;
+        private String nationalIdentificationNumber;
     }
 }

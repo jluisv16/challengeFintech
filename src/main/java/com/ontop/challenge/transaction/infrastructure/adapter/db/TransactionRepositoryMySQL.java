@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -37,21 +38,17 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
     public Optional<TransactionByUser> findTransactionByParametersAndSort(String amountSent, String date, Pageable pagingSort) {
 
         //Inicializar con exito el mensaje
-        TransactionByUser transactionByUser = TransactionByUser.builder()
-                .messageResponse(MessageResponse.builder()
-                        .code("200")
-                        .message("Se ha ejecutado con éxito")
-                        .build())
-                .build();
+        TransactionByUser transactionByUser =
+                TransactionByUser.builder()
+                        .messageResponse(MessageResponse.builder()
+                                .code("200")
+                                .message("Se ha ejecutado con éxito")
+                                .build()).build();
 
         log.info(transactionByUser.toString());
-        log.info("Parameters: {}, {}, {}",
-                Util.convertStringToLocalDateTime(date),
-                Double.parseDouble(amountSent),
-                pagingSort);
+        log.info("Parameters: {}, {}, {}", Util.convertStringToLocalDateTime(date), Double.parseDouble(amountSent), pagingSort);
 
-        Page<TransactionEntity> transactionEntities = transactionCrudRepository
-                .findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date) , Double.parseDouble(amountSent), pagingSort);
+        Page<TransactionEntity> transactionEntities = transactionCrudRepository.findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date), Double.parseDouble(amountSent), pagingSort);
 
         log.info(transactionEntities.toString());
 
@@ -121,87 +118,108 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         return this.transactionMapper.toTransaction(this.transactionCrudRepository.save(transactionEntity));
     }
 
+    @Override
+    public Optional<ProcessTransactionResponse> processTransaction(ProcessTransactionRequest processTransactionRequest) {
 
-    public Optional<ProcessTransactionResponse> processTransaction(Transaction user) {
-/*
-        log.info("Iniciar processTransaction: {} ", user);
-        ProcessTransaction processTransaction = ProcessTransaction.builder()
-                .messageResponse(MessageResponse.builder()
-                        .code("200")
-                        .message("Se ha ejecutado con éxito")
-                        .build())
-                .build();
+        log.info("Iniciar processTransaction: {} ", processTransactionRequest);
+        Transaction transaction = new Transaction();
 
-        //Se crea la transaccion (Provider)
-        CreateWalletResponse createWalletResponse = mockProvider.createWallet(fillInformation(user));
-        log.info("CreateWalletResponse: {} ", createWalletResponse);
+        CreateWalletResponse createWalletResponse = mockProvider.createWallet(fillInformation(processTransactionRequest));
 
         if (createWalletResponse == null) {
-            processTransaction = ProcessTransaction.builder()
+
+            return Optional.of(ProcessTransactionResponse.builder()
                     .messageResponse(MessageResponse.builder()
                             .code("408")
                             .message("No se encuentra habilitado el recurso de creación de Wallet")
-                            .build())
-                    .build();
-
-            return Optional.of(processTransaction);
+                            .build()).build());
         }
+
 
         //Get Balance from Provider
         BalanceResponse balanceResponse = mockProvider.getBalance(createWalletResponse.getUser_id());
         log.info("BalanceResponse: {} ", balanceResponse);
 
         if (balanceResponse == null) {
-            processTransaction = ProcessTransaction.builder()
+            return Optional.of(ProcessTransactionResponse.builder()
                     .messageResponse(MessageResponse.builder()
                             .code("408")
                             .message("No se encuentra habilitado el recurso de consulta de Balance")
-                            .build())
-                    .build();
-
-            return Optional.of(processTransaction);
+                            .build()).build());
         }
 
         //Can do transactions
         if (balanceResponse.getBalance() > 0) {
-            log.info("Fill Information Patymensts: " + fillInformationPayment(user));
-            CreatePaymentProviderResponse createPaymentProviderResponse;
-            createPaymentProviderResponse = mockProvider.createPaymentProvider(fillInformationPayment(user));
+            log.info("Fill Information Payments: " + fillInformationPayment(processTransactionRequest));
+            CreatePaymentProviderResponse responsePayment = mockProvider.createPaymentProvider(fillInformationPayment(processTransactionRequest));
 
-            if (createPaymentProviderResponse == null) {
-                processTransaction = ProcessTransaction.builder()
+            if (responsePayment == null) {
+
+                return Optional.of(ProcessTransactionResponse.builder()
                         .messageResponse(MessageResponse.builder()
                                 .code("408")
                                 .message("No se encuentra habilitado el de pagos del proveedor")
-                                .build())
-                        .build();
-                return Optional.of(processTransaction);
-
+                                .build()).build());
             }
 
-            log.info("Mock createPaymentProvider: {}", createPaymentProviderResponse);
-            user.getTransactionEntities().get(0).setCodePaymentInfo(createPaymentProviderResponse.getPaymentInfo().getId());
-            user.getTransactionEntities().get(0).setStatus(createPaymentProviderResponse.getRequestInfo().getStatus());
-            user.getTransactionEntities().get(0).setTransactionCreated(LocalDateTime.now());
+            log.info("Mock createPaymentProvider: {}", responsePayment);
+            //Mapeo de Campos
+
+            transaction.setCodePaymentInfo(responsePayment.getPaymentInfo().getId());
+            transaction.setCurrency(processTransactionRequest.getDestination().getAccount().getCurrency());
+            transaction.setTransactionCreated(LocalDateTime.now());
+            transaction.setStatus(responsePayment.getRequestInfo().getStatus());
+            transaction.setAmountSent(responsePayment.getPaymentInfo().getAmount());
+            transaction.setAccountNumber(processTransactionRequest.getDestination().getAccount().getAccountNumber());
+            transaction.setFirstName(processTransactionRequest.getDestination().getFirstName());
+            transaction.setLastName(processTransactionRequest.getDestination().getLastName());
+            transaction.setRoutingNumber(processTransactionRequest.getDestination().getAccount().getRoutingNumber());
+            transaction.setNationalIdentificationNumber(processTransactionRequest.getSource().getSourceInformation().getNationalIdentificationNumber());
             //Se calcula el 10% de lo enviado.
-            Double calcFee = user.getTransactionEntities().get(0).getAmountSent() * 0.1;
+            Double calcFee = transaction.getAmountSent() * 0.1;
+            transaction.setAmountFee(calcFee);
 
-            user.getTransactionEntities().get(0).setAmountFee(calcFee);
-
-            this.saveUser(user);
-
-        } else {
-            processTransaction = ProcessTransaction.builder()
-                    .messageResponse(MessageResponse.builder()
-                            .code("5555")
-                            .message("No cuenta con fondos suficientes")
-                            .build())
-                    .build();
+            this.saveTransaction(transaction);
         }
-*/
-        return null;
+
+        return Optional.of(ProcessTransactionResponse.builder()
+                .messageResponse(MessageResponse.builder()
+                        .code("200")
+                        .message("Se ha ejecutado con éxito")
+                        .build())
+                .status(transaction.getStatus())
+                .build());
     }
 
+    private CreatePaymentProviderRequest fillInformationPayment(ProcessTransactionRequest request) {
+
+        return new CreatePaymentProviderRequest(
+                new CreatePaymentProviderRequest.Source(
+                        request.getSource().getType(),
+                        new CreatePaymentProviderRequest.SourceInformation(request.getSource().getSourceInformation().getName()),
+                        new CreatePaymentProviderRequest.Account(
+                                request.getSource().getAccount().getAccountNumber(),
+                                request.getSource().getAccount().getCurrency(),
+                                request.getSource().getAccount().getRoutingNumber()
+                        )
+                ),
+                new CreatePaymentProviderRequest.Destination(
+                        request.getDestination().getFirstName() + " " + request.getDestination()
+                                .getLastName(),
+                        new CreatePaymentProviderRequest.Account(
+                                request.getDestination().getAccount().getAccountNumber(),
+                                request.getDestination().getAccount().getCurrency(),
+                                request.getDestination().getAccount().getRoutingNumber()
+                        )
+                ),
+                request.getAmount()
+        );
+
+    }
+
+    private CreateWalletRequest fillInformation(ProcessTransactionRequest processTransactionRequest) {
+        return new CreateWalletRequest(processTransactionRequest.getAmount(),processTransactionRequest.getIdUser());
+    }
 
 
 }

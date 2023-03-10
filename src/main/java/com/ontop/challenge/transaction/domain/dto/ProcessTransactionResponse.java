@@ -9,6 +9,7 @@ public class ProcessTransactionResponse {
 
     private MessageResponse messageResponse;
 
+    private String status;
 
 
 

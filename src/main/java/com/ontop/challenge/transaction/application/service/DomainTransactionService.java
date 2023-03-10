@@ -1,5 +1,6 @@
 package com.ontop.challenge.transaction.application.service;
 
+import com.ontop.challenge.transaction.domain.dto.ProcessTransactionRequest;
 import com.ontop.challenge.transaction.domain.dto.ProcessTransactionResponse;
 import com.ontop.challenge.transaction.domain.dto.TransactionByUser;
 import com.ontop.challenge.transaction.domain.model.Transaction;
@@ -21,7 +22,7 @@ public class DomainTransactionService implements TransactionService{
     }
 
     @Override
-    public Optional<ProcessTransactionResponse> processTransaction(Transaction transaction) {
-        return transactionRepository.processTransaction(transaction);
+    public Optional<ProcessTransactionResponse> processTransaction(ProcessTransactionRequest processTransactionRequest) {
+        return transactionRepository.processTransaction(processTransactionRequest);
     }
 }
