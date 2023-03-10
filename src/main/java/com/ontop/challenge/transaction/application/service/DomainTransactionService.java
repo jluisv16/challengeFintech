@@ -2,9 +2,10 @@ package com.ontop.challenge.transaction.application.service;
 
 import com.ontop.challenge.transaction.domain.dto.ProcessTransaction;
 import com.ontop.challenge.transaction.domain.dto.TransactionByUser;
-import com.ontop.challenge.transaction.domain.model.User;
+import com.ontop.challenge.transaction.domain.model.Transaction;
 import com.ontop.challenge.transaction.domain.port.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 
@@ -14,13 +15,13 @@ public class DomainTransactionService implements TransactionService{
     private final TransactionRepository transactionRepository;
 
     @Override
-    public Optional<TransactionByUser> getTransactionsByUser(Integer idUser) {
+    public Optional<TransactionByUser> findTransactionByParametersAndSort(String amountSent, String date, Pageable pagingSort){
 
-        return transactionRepository.getTransactionsByUser(idUser);
+        return transactionRepository.findTransactionByParametersAndSort(amountSent, date, pagingSort);
     }
 
     @Override
-    public Optional<ProcessTransaction> processTransaction(User user) {
-        return transactionRepository.processTransaction(user);
+    public Optional<ProcessTransaction> processTransaction(Transaction transaction) {
+        return transactionRepository.processTransaction(transaction);
     }
 }

@@ -2,27 +2,26 @@ package com.ontop.challenge.transaction.infrastructure.adapter.db;
 
 import com.ontop.challenge.transaction.domain.dto.*;
 import com.ontop.challenge.transaction.domain.model.Transaction;
-import com.ontop.challenge.transaction.domain.model.User;
 import com.ontop.challenge.transaction.domain.port.TransactionRepository;
 import com.ontop.challenge.transaction.infrastructure.adapter.ws.MockProvider;
 import com.ontop.challenge.transaction.infrastructure.entity.TransactionEntity;
-import com.ontop.challenge.transaction.infrastructure.entity.UserEntity;
-import com.ontop.challenge.transaction.infrastructure.exceptions.ResourceNotFoundException;
 import com.ontop.challenge.transaction.infrastructure.rest.mapper.TransactionMapper;
-import com.ontop.challenge.transaction.infrastructure.util.SortByDateTime;
+import com.ontop.challenge.transaction.infrastructure.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+
 import java.util.Optional;
 
 @Repository
 @Slf4j
 public class TransactionRepositoryMySQL implements TransactionRepository {
 
-
-    private final UserCrudRepositoryMySQL userCrudRepository;
 
     private final TransactionCrudRepositoryMySQL transactionCrudRepository;
 
@@ -32,15 +31,12 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
     @Autowired
     private TransactionMapper transactionMapper;
 
-    public TransactionRepositoryMySQL(UserCrudRepositoryMySQL userCrudRepository,
-                                      TransactionCrudRepositoryMySQL transactionCrudRepository) {
-        this.userCrudRepository = userCrudRepository;
+    public TransactionRepositoryMySQL(TransactionCrudRepositoryMySQL transactionCrudRepository) {
         this.transactionCrudRepository = transactionCrudRepository;
     }
 
-
     @Override
-    public Optional<TransactionByUser> getTransactionsByUser(Integer idUser) {
+    public Optional<TransactionByUser> findTransactionByParametersAndSort(String amountSent, String date, Pageable pagingSort) {
 
         //Inicializar con exito el mensaje
         TransactionByUser transactionByUser = TransactionByUser.builder()
@@ -50,15 +46,37 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
                         .build())
                 .build();
 
-        //Actualizamos si encontramos un estado diferente
-        UserEntity userEntity = this.userCrudRepository.findById(idUser).orElseThrow(
-                ()-> new ResourceNotFoundException("Recurso no encontrado")
-        );
+        log.info(transactionByUser.toString());
+        log.info("Parameters: {}, {}, {}",
+                Util.convertStringToLocalDateTime(date),
+                Double.parseDouble(amountSent),
+                pagingSort);
 
-        for (TransactionEntity p:userEntity.getTransactionEntities()) {
+        Pageable sortedByPriceDescNameAsc =
+                PageRequest.of(0, 5, Sort.by("transactionCreated").descending());
+
+        //findByTransactionCreatedAndAmountSentOrderByTransactionCreatedDesc
+        Page<TransactionEntity> transactionEntities = transactionCrudRepository
+                //.findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date) , Double.parseDouble(amountSent), pagingSort);
+                        .findAll(sortedByPriceDescNameAsc);
+        log.info(transactionEntities.toString());
+
+        transactionByUser.setCurrentPage(transactionEntities.getNumber());
+        transactionByUser.setTotalItems(transactionEntities.getTotalElements());
+        transactionByUser.setTotalPages(transactionEntities.getTotalPages());
+        transactionByUser.setTransactions(transactionMapper.toListTransaction(transactionEntities.getContent()));
+
+        return Optional.of(transactionByUser);
+    }
+
+
+    public Optional<TransactionByUser> getTransactionsByUser(Integer idUser) {
+
+/*
+        for (TransactionEntity p : userEntity.getTransactionEntities()) {
             PaymentProviderStatusResponse response = mockProvider.getPaymentProviderStatus(p.getCodePaymentInfo());
-            if (response != null){
-                if (response.getStatus().equals("Failed") && p.getStatus().equals("Processing")){
+            if (response != null) {
+                if (response.getStatus().equals("Failed") && p.getStatus().equals("Processing")) {
 
                     //Updated status of TransactionEntity to Failed
                     p.setStatus("Failed");
@@ -79,7 +97,7 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
                     this.saveTransaction(transactionMapper.toTransaction(p));
 
                 }
-            }else{
+            } else {
                 transactionByUser = TransactionByUser.builder()
                         .messageResponse(MessageResponse.builder()
                                 .code("408")
@@ -90,23 +108,17 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
             }
         }
 
-        userEntity.getTransactionEntities().forEach(p-> {
+        userEntity.getTransactionEntities().forEach(p -> {
             p.setUserEntity(null);
         });
 
-        if (transactionByUser.getMessageResponse().getCode().equals("200")){
+        if (transactionByUser.getMessageResponse().getCode().equals("200")) {
 
             transactionByUser.setTransactions(this.transactionMapper.toUser(userEntity).getTransactionEntities());
             transactionByUser.getTransactions().sort(new SortByDateTime().reversed());
         }
-
-        return Optional.of(transactionByUser);
-    }
-
-    @Override
-    public User saveUser(User user) {
-        UserEntity userEntity = this.transactionMapper.toUserEntity(user);
-        return this.transactionMapper.toUser(this.userCrudRepository.save(userEntity));
+*/
+        return null;
     }
 
     @Override
@@ -115,9 +127,9 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         return this.transactionMapper.toTransaction(this.transactionCrudRepository.save(transactionEntity));
     }
 
-    @Override
-    public Optional<ProcessTransaction> processTransaction(User user) {
 
+    public Optional<ProcessTransaction> processTransaction(Transaction user) {
+/*
         log.info("Iniciar processTransaction: {} ", user);
         ProcessTransaction processTransaction = ProcessTransaction.builder()
                 .messageResponse(MessageResponse.builder()
@@ -130,7 +142,7 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         CreateWalletResponse createWalletResponse = mockProvider.createWallet(fillInformation(user));
         log.info("CreateWalletResponse: {} ", createWalletResponse);
 
-        if(createWalletResponse == null){
+        if (createWalletResponse == null) {
             processTransaction = ProcessTransaction.builder()
                     .messageResponse(MessageResponse.builder()
                             .code("408")
@@ -145,7 +157,7 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         BalanceResponse balanceResponse = mockProvider.getBalance(createWalletResponse.getUser_id());
         log.info("BalanceResponse: {} ", balanceResponse);
 
-        if(balanceResponse == null){
+        if (balanceResponse == null) {
             processTransaction = ProcessTransaction.builder()
                     .messageResponse(MessageResponse.builder()
                             .code("408")
@@ -157,12 +169,12 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         }
 
         //Can do transactions
-        if (balanceResponse.getBalance() > 0){
-            log.info("Fill Information Patymensts: "+ fillInformationPayment(user));
+        if (balanceResponse.getBalance() > 0) {
+            log.info("Fill Information Patymensts: " + fillInformationPayment(user));
             CreatePaymentProviderResponse createPaymentProviderResponse;
             createPaymentProviderResponse = mockProvider.createPaymentProvider(fillInformationPayment(user));
 
-            if (createPaymentProviderResponse == null){
+            if (createPaymentProviderResponse == null) {
                 processTransaction = ProcessTransaction.builder()
                         .messageResponse(MessageResponse.builder()
                                 .code("408")
@@ -184,7 +196,7 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
 
             this.saveUser(user);
 
-        }else {
+        } else {
             processTransaction = ProcessTransaction.builder()
                     .messageResponse(MessageResponse.builder()
                             .code("5555")
@@ -192,39 +204,10 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
                             .build())
                     .build();
         }
-
-        return Optional.of(processTransaction);
+*/
+        return null;
     }
 
-    private CreateWalletRequest fillInformation(User user){
-        CreateWalletRequest createWalletRequest = new CreateWalletRequest();
-        createWalletRequest.setAmount(user.getTransactionEntities().get(0).getAmountSent());
-        createWalletRequest.setUser_id(user.getIdUser());
-        return createWalletRequest;
-    }
-
-    private CreatePaymentProviderRequest fillInformationPayment (User user){
-        return CreatePaymentProviderRequest.builder()
-        .source(CreatePaymentProviderRequest.Source.builder()
-                .type("COMPANY NAME")
-                .sourceInformation(CreatePaymentProviderRequest.SourceInformation.builder()
-                        .name("COMPANY NAME")
-                        .build())
-                .account(CreatePaymentProviderRequest.Account.builder()
-                        .accountNumber(user.getAccountNumber())
-                        .currency(user.getCurrency())
-                        .routingNumber(user.getRoutingNumber())
-                        .build()).build())
-        .destination(CreatePaymentProviderRequest.Destination.builder()
-                .name(user.getFirstName() + " " + user.getLastName())
-                .account(CreatePaymentProviderRequest.Account.builder()
-                        .accountNumber(user.getTransactionEntities().get(0).getAccountNumber())
-                        .currency(user.getTransactionEntities().get(0).getCurrency())
-                        .routingNumber(user.getTransactionEntities().get(0).getRoutingNumber())
-                        .build())
-                .build())
-        .amount(user.getTransactionEntities().get(0).getAmountSent()).build();
-    }
 
 
 }

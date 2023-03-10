@@ -10,5 +10,9 @@ import java.util.List;
 @Builder
 public class TransactionByUser {
     private MessageResponse messageResponse;
+    private Integer currentPage;
+    private Long totalItems;
+    private Integer totalPages;
     private List<Transaction> transactions;
+    
 }

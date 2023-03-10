@@ -1,69 +1,55 @@
 package com.ontop.challenge.transaction.infrastructure.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Positive;
 import javax.validation.constraints.Size;
-import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Setter
 @Getter
+@Setter
 @Entity
 @Table(name = "Transaction", schema = "digitalWallet")
-public class TransactionEntity implements Serializable {
+public class TransactionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idTransaction", nullable = false)
     private Integer id;
-
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "idUser")
-    @JsonIgnoreProperties("transactionEntities")
-    private UserEntity userEntity;
 
     @Size(max = 40)
     @NotNull
     @Column(name = "codePaymentInfo", nullable = false, length = 40)
     private String codePaymentInfo;
 
-    @NotNull(message = "Por favor ingrese el monto a enviar.")
-    @Column(name = "amountSent", nullable = false)
+    @NotNull
+    @Column(name = "amountSent", nullable = false, precision = 8, scale = 2)
     private Double amountSent;
 
-    @NotNull(message = "El impuesto debe ser ingresado.")
-    @Column(name = "amountFee", nullable = false)
+    @Column(name = "amountFee", precision = 8, scale = 2)
     private Double amountFee;
 
     @Size(max = 9)
-    @NotNull(message = "Debe ingresar el número de ruta.")
+    @NotNull
     @Column(name = "routingNumber", nullable = false, length = 9)
     private String routingNumber;
 
     @Size(max = 3)
-    @NotNull(message = "Por favor ingresar un tipo de Moneda.")
+    @NotNull
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
 
-    @NotNull
-    @Column(name = "transactionCreated", nullable = false)
+    @Column(name = "transactionCreated")
     private LocalDateTime transactionCreated;
 
-    @NotNull
-    @Column(name = "transactionUpdated", nullable = false)
+    @Column(name = "transactionUpdated")
     private LocalDateTime transactionUpdated;
 
-    @Size(max = 15, message = "No debe contener mas de 15 caracteres")
-    @NotNull(message = "Debe ingresar el número de cuenta del destinario")
+    @Size(max = 15)
+    @NotNull
     @Column(name = "accountNumber", nullable = false, length = 15)
     private String accountNumber;
 
@@ -76,5 +62,13 @@ public class TransactionEntity implements Serializable {
     @NotNull
     @Column(name = "status", nullable = false, length = 15)
     private String status;
+
+    @Size(max = 45)
+    @Column(name = "firstName", length = 45)
+    private String firstName;
+
+    @Size(max = 45)
+    @Column(name = "lastName", length = 45)
+    private String lastName;
 
 }
