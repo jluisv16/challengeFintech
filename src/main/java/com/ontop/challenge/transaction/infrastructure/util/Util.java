@@ -25,7 +25,7 @@ public class Util {
             orders.add(new Sort.Order(getSortDirection(sort[1]), sort[0]));
         }
 
-        return PageRequest.of(page, size);
+        return PageRequest.of(page, size, Sort.by(orders));
     }
 
     private static Sort.Direction getSortDirection(String direction) {

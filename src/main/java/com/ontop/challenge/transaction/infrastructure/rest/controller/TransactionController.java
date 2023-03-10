@@ -1,9 +1,9 @@
 package com.ontop.challenge.transaction.infrastructure.rest.controller;
 
 import com.ontop.challenge.transaction.application.service.TransactionService;
-import com.ontop.challenge.transaction.domain.dto.ProcessTransaction;
+import com.ontop.challenge.transaction.domain.dto.ProcessTransactionResponse;
+import com.ontop.challenge.transaction.domain.dto.ProcessTransactionRequest;
 import com.ontop.challenge.transaction.domain.dto.TransactionByUser;
-import com.ontop.challenge.transaction.domain.model.Transaction;
 import com.ontop.challenge.transaction.infrastructure.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +24,6 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
-    //Creación de un servicio REST - GET que capture por param(sort,
     @GetMapping
     public ResponseEntity<Optional<TransactionByUser>> getTransactions(
             @RequestParam String date,
@@ -44,9 +43,9 @@ public class TransactionController {
     }
 
     @PostMapping
-    public ResponseEntity<Optional<ProcessTransaction>> getTransactions(@RequestBody Transaction transaction){
+    public ResponseEntity<Optional<ProcessTransactionResponse>> processTransaction(@RequestBody ProcessTransactionRequest transaction){
         log.info("ID:" + transaction);
-        Optional<ProcessTransaction> processTransaction = this.transactionService.processTransaction(transaction);
+        Optional<ProcessTransactionResponse> processTransaction = this.transactionService.processTransaction(transaction);
 
         return new ResponseEntity<>(processTransaction, HttpStatus.CREATED);
     }

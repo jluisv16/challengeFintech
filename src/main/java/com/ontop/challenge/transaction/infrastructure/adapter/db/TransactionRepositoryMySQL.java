@@ -10,9 +10,7 @@ import com.ontop.challenge.transaction.infrastructure.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 
@@ -52,13 +50,9 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
                 Double.parseDouble(amountSent),
                 pagingSort);
 
-        Pageable sortedByPriceDescNameAsc =
-                PageRequest.of(0, 5, Sort.by("transactionCreated").descending());
-
-        //findByTransactionCreatedAndAmountSentOrderByTransactionCreatedDesc
         Page<TransactionEntity> transactionEntities = transactionCrudRepository
-                //.findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date) , Double.parseDouble(amountSent), pagingSort);
-                        .findAll(sortedByPriceDescNameAsc);
+                .findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date) , Double.parseDouble(amountSent), pagingSort);
+
         log.info(transactionEntities.toString());
 
         transactionByUser.setCurrentPage(transactionEntities.getNumber());
@@ -128,7 +122,7 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
     }
 
 
-    public Optional<ProcessTransaction> processTransaction(Transaction user) {
+    public Optional<ProcessTransactionResponse> processTransaction(Transaction user) {
 /*
         log.info("Iniciar processTransaction: {} ", user);
         ProcessTransaction processTransaction = ProcessTransaction.builder()

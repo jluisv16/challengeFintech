@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class ProcessTransaction {
+public class ProcessTransactionResponse {
 
     private MessageResponse messageResponse;
 

@@ -1,6 +1,6 @@
 package com.ontop.challenge.transaction.domain.port;
 
-import com.ontop.challenge.transaction.domain.dto.ProcessTransaction;
+import com.ontop.challenge.transaction.domain.dto.ProcessTransactionResponse;
 import com.ontop.challenge.transaction.domain.dto.TransactionByUser;
 import com.ontop.challenge.transaction.domain.model.Transaction;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +14,6 @@ public interface TransactionRepository {
 
     Transaction saveTransaction (Transaction transaction);
 
-    Optional<ProcessTransaction> processTransaction(Transaction transaction);
+    Optional<ProcessTransactionResponse> processTransaction(Transaction transaction);
 
 }
