@@ -6,7 +6,9 @@ import com.ontop.challenge.transaction.domain.port.TransactionRepository;
 import com.ontop.challenge.transaction.infrastructure.adapter.ws.MockProvider;
 import com.ontop.challenge.transaction.infrastructure.entity.TransactionEntity;
 import com.ontop.challenge.transaction.infrastructure.rest.mapper.TransactionMapper;
+import com.ontop.challenge.transaction.infrastructure.util.Constants;
 import com.ontop.challenge.transaction.infrastructure.util.Util;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -15,24 +17,18 @@ import org.springframework.stereotype.Repository;
 
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
+@RequiredArgsConstructor
 @Repository
 @Slf4j
 public class TransactionRepositoryMySQL implements TransactionRepository {
-
 
     private final TransactionCrudRepositoryMySQL transactionCrudRepository;
 
     @Autowired
     private MockProvider mockProvider;
-
-    @Autowired
-    private TransactionMapper transactionMapper;
-
-    public TransactionRepositoryMySQL(TransactionCrudRepositoryMySQL transactionCrudRepository) {
-        this.transactionCrudRepository = transactionCrudRepository;
-    }
 
     @Override
     public Optional<TransactionByUser> findTransactionByParametersAndSort(String amountSent, String date, Pageable pagingSort) {
@@ -41,81 +37,74 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         TransactionByUser transactionByUser =
                 TransactionByUser.builder()
                         .messageResponse(MessageResponse.builder()
-                                .code("200")
-                                .message("Se ha ejecutado con éxito")
+                                .code(Constants.HTTP_CODE_OK)
+                                .message(Constants.HTTP_MESSAGE_SUCCESSFUL)
                                 .build()).build();
+
+        //Cada vez que se invoque el servicio antes llamará todas las transacciones que se encuentran en estado "Processing"
+        List<Transaction> transactions =
+                TransactionMapper.MAPPER.toListTransaction(
+                        transactionCrudRepository.findByStatus(Constants.VALUE_STATUS_PROCESSING_DEFAULT));
+
+        if(transactions.size() > 0){
+            //Invocar Servicio Proveedor Status
+            for (Transaction p:transactions) {
+                PaymentProviderStatusResponse response = mockProvider.getPaymentProviderStatus(p.getCodePaymentInfo());
+                if (response != null) {
+                    if (response.getStatus().equals("Failed")) {
+
+                        //Updated status of TransactionEntity to Failed
+                        p.setStatus("Failed");
+                        p.setTransactionUpdated(LocalDateTime.now());
+                        this.saveTransaction(p);
+
+                        p.setId(null);
+                        p.setAmountFee(0.0);
+                        p.setStatus("Refunded");
+                        p.setTransactionCreated(LocalDateTime.now());
+                        p.setTransactionUpdated(LocalDateTime.now());
+                        this.saveTransaction(p);
+                    }
+
+                    if (response.getStatus().equals("Completed")) {
+                        p.setStatus("Completed");
+                        p.setTransactionUpdated(LocalDateTime.now());
+                        this.saveTransaction(p);
+
+                    }
+                } else {
+                    return Optional.of(TransactionByUser.builder()
+                            .messageResponse(MessageResponse.builder()
+                                    .code(Constants.HTTP_CODE_TIMEOUT)
+                                    .message(Constants.HTTP_MESSAGE_TIMEOUT)
+                                    .build())
+                            .build());
+                }
+            }
+
+
+        }
 
         log.info(transactionByUser.toString());
         log.info("Parameters: {}, {}, {}", Util.convertStringToLocalDateTime(date), Double.parseDouble(amountSent), pagingSort);
 
-        Page<TransactionEntity> transactionEntities = transactionCrudRepository.findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date), Double.parseDouble(amountSent), pagingSort);
+        Page<TransactionEntity> transactionEntities = transactionCrudRepository
+                .findByTransactionCreatedAndAmountSent(Util.convertStringToLocalDateTime(date), Double.parseDouble(amountSent), pagingSort);
 
         log.info(transactionEntities.toString());
 
         transactionByUser.setCurrentPage(transactionEntities.getNumber());
         transactionByUser.setTotalItems(transactionEntities.getTotalElements());
         transactionByUser.setTotalPages(transactionEntities.getTotalPages());
-        transactionByUser.setTransactions(transactionMapper.toListTransaction(transactionEntities.getContent()));
+        transactionByUser.setTransactions(TransactionMapper.MAPPER.toListTransaction(transactionEntities.getContent()));
 
         return Optional.of(transactionByUser);
     }
 
-
-    public Optional<TransactionByUser> getTransactionsByUser(Integer idUser) {
-
-/*
-        for (TransactionEntity p : userEntity.getTransactionEntities()) {
-            PaymentProviderStatusResponse response = mockProvider.getPaymentProviderStatus(p.getCodePaymentInfo());
-            if (response != null) {
-                if (response.getStatus().equals("Failed") && p.getStatus().equals("Processing")) {
-
-                    //Updated status of TransactionEntity to Failed
-                    p.setStatus("Failed");
-                    p.setTransactionUpdated(LocalDateTime.now());
-                    this.saveTransaction(transactionMapper.toTransaction(p));
-
-                    p.setId(null);
-                    p.setAmountFee(0.0);
-                    p.setStatus("Refunded");
-                    p.setTransactionCreated(LocalDateTime.now());
-                    p.setTransactionUpdated(LocalDateTime.now());
-                    this.saveTransaction(transactionMapper.toTransaction(p));
-                }
-
-                if (response.getStatus().equals("Completed") && p.getStatus().equals("Processing")) {
-                    p.setStatus("Completed");
-                    p.setTransactionUpdated(LocalDateTime.now());
-                    this.saveTransaction(transactionMapper.toTransaction(p));
-
-                }
-            } else {
-                transactionByUser = TransactionByUser.builder()
-                        .messageResponse(MessageResponse.builder()
-                                .code("408")
-                                .message("Se ha excedido el limite de tiempo para la ejecución del servicio externo")
-                                .build())
-                        .build();
-                break;
-            }
-        }
-
-        userEntity.getTransactionEntities().forEach(p -> {
-            p.setUserEntity(null);
-        });
-
-        if (transactionByUser.getMessageResponse().getCode().equals("200")) {
-
-            transactionByUser.setTransactions(this.transactionMapper.toUser(userEntity).getTransactionEntities());
-            transactionByUser.getTransactions().sort(new SortByDateTime().reversed());
-        }
-*/
-        return null;
-    }
-
     @Override
     public Transaction saveTransaction(Transaction transaction) {
-        TransactionEntity transactionEntity = this.transactionMapper.toTransactionEntity(transaction);
-        return this.transactionMapper.toTransaction(this.transactionCrudRepository.save(transactionEntity));
+        TransactionEntity transactionEntity = TransactionMapper.MAPPER.toTransactionEntity(transaction);
+        return TransactionMapper.MAPPER.toTransaction(this.transactionCrudRepository.save(transactionEntity));
     }
 
     @Override
@@ -130,8 +119,8 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
 
             return Optional.of(ProcessTransactionResponse.builder()
                     .messageResponse(MessageResponse.builder()
-                            .code("408")
-                            .message("No se encuentra habilitado el recurso de creación de Wallet")
+                            .code(Constants.HTTP_CODE_TIMEOUT)
+                            .message(Constants.HTTP_MESSAGE_TIMEOUT)
                             .build()).build());
         }
 
@@ -143,8 +132,8 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
         if (balanceResponse == null) {
             return Optional.of(ProcessTransactionResponse.builder()
                     .messageResponse(MessageResponse.builder()
-                            .code("408")
-                            .message("No se encuentra habilitado el recurso de consulta de Balance")
+                            .code(Constants.HTTP_CODE_TIMEOUT)
+                            .message(Constants.HTTP_MESSAGE_TIMEOUT)
                             .build()).build());
         }
 
@@ -157,8 +146,8 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
 
                 return Optional.of(ProcessTransactionResponse.builder()
                         .messageResponse(MessageResponse.builder()
-                                .code("408")
-                                .message("No se encuentra habilitado el de pagos del proveedor")
+                                .code(Constants.HTTP_CODE_TIMEOUT)
+                                .message(Constants.HTTP_MESSAGE_TIMEOUT)
                                 .build()).build());
             }
 
@@ -184,8 +173,8 @@ public class TransactionRepositoryMySQL implements TransactionRepository {
 
         return Optional.of(ProcessTransactionResponse.builder()
                 .messageResponse(MessageResponse.builder()
-                        .code("200")
-                        .message("Se ha ejecutado con éxito")
+                        .code(Constants.HTTP_CODE_OK)
+                        .message(Constants.HTTP_MESSAGE_SUCCESSFUL)
                         .build())
                 .status(transaction.getStatus())
                 .build());
