@@ -1,0 +1,191 @@
+{
+    "info": {
+        "name": "Mocks for interviews",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": ""
+    },
+    "item": [
+        {
+            "name": "Create wallet transaction",
+            "request": {
+                "method": "POST",
+                "url": {
+                    "raw": "http://mockoon.tools.getontop.com:3000/wallets/transactions",
+                    "path": [
+                        "wallets",
+                        "transactions"
+                    ],
+                    "protocol": "http",
+                    "host": [
+                        "mockoon",
+                        "tools",
+                        "getontop",
+                        "com"
+                    ],
+                    "port": "3000"
+                },
+                "body": {
+                    "mode": "raw",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    },
+                    "raw": "{\n    \"amount\": 50000,\n    \"user_id\": 1\n}"
+                }
+            }
+        },
+        {
+            "name": "Create payment in provider",
+            "request": {
+                "method": "POST",
+                "url": {
+                    "raw": "http://mockoon.tools.getontop.com:3000/api/v1/payments",
+                    "path": [
+                        "api",
+                        "v1",
+                        "payments"
+                    ],
+                    "protocol": "http",
+                    "host": [
+                        "mockoon",
+                        "tools",
+                        "getontop",
+                        "com"
+                    ],
+                    "port": "3000"
+                },
+                "body": {
+                    "mode": "raw",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    },
+                    "raw": "{\n    \"source\": {\n        \"type\": \"COMPANY\",\n        \"sourceInformation\": {\n            \"name\": \"ONTOP INC\"\n        },\n        \"account\": {\n            \"accountNumber\": \"0245253419\",\n            \"currency\": \"USD\",\n            \"routingNumber\": \"028444018\"\n        }\n    },\n    \"destination\": {\n        \"name\": \"TONY STARK\",\n        \"account\": {\n            \"accountNumber\": \"1885226711\",\n            \"currency\": \"USD\",\n            \"routingNumber\": \"211927207\"\n        }\n    },\n    \"amount\": 1200\n}"
+                }
+            }
+        },
+        {
+            "name": "Balance",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "http://mockoon.tools.getontop.com:3000/wallets/balance?user_id=1",
+                    "query": [
+                        {
+                            "key": "user_id",
+                            "value": "1"
+                        }
+                    ],
+                    "variable": [],
+                    "path": [
+                        "wallets",
+                        "balance"
+                    ],
+                    "protocol": "http",
+                    "host": [
+                        "mockoon",
+                        "tools",
+                        "getontop",
+                        "com"
+                    ],
+                    "port": "3000"
+                }
+            }
+        },
+        {
+            "name": "Payment in provider status (random status on each request)",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "http://mockoon.tools.getontop.com:3000/api/v1/payments/:paymentId/status",
+                    "query": [],
+                    "variable": [
+                        {
+                            "key": "paymentId",
+                            "value": "887666fe-5e37-47ac-b842-bdf44807a7db"
+                        }
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "payments",
+                        ":paymentId",
+                        "status"
+                    ],
+                    "protocol": "http",
+                    "host": [
+                        "mockoon",
+                        "tools",
+                        "getontop",
+                        "com"
+                    ],
+                    "port": "3000"
+                }
+            }
+        },
+        {
+            "name": "Challenge-ObtenerTrxDescFecha",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "http://localhost:8080/api/v1/transaction/?date=2023-03-08 11:30:40&amountSent=2500.00&sort=transactionCreated,desc",
+                    "query": [
+                        {
+                            "key": "date",
+                            "value": "2023-03-08 11:30:40"
+                        },
+                        {
+                            "key": "amountSent",
+                            "value": "2500.00"
+                        },
+                        {
+                            "key": "sort",
+                            "value": "transactionCreated,desc"
+                        }
+                    ],
+                    "variable": [],
+                    "path": [
+                        "api",
+                        "v1",
+                        "transaction"
+                    ],
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080"
+                }
+            }
+        },
+        {
+            "name": "Challenge-ObtenerTrxDescFecha Copy",
+            "request": {
+                "method": "POST",
+                "url": {
+                    "raw": "http://localhost:8081/api/v1/transaction",
+                    "path": [
+                        "api",
+                        "v1",
+                        "transaction"
+                    ],
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8081"
+                },
+                "body": {
+                    "mode": "raw",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    },
+                    "raw": "{   \"idUser\":150,\n    \"source\": {\n        \"type\": \"COMPANY\",\n        \"sourceInformation\": {\n            \"name\": \"ONTOP INC\",\n            \"nationalIdentificationNumber\": 447845\n        },\n        \"account\": {\n            \"accountNumber\": \"0245253419\",\n            \"currency\": \"USD\",\n            \"routingNumber\": \"028444018\"\n        }\n    },\n    \"destination\": {\n        \"firstName\": \"TONY\",\n        \"lastName\": \"STARK\",\n        \"account\": {\n            \"accountNumber\": \"1885226711\",\n            \"currency\": \"USD\",\n            \"routingNumber\": \"211927207\"\n        }\n    },\n    \"amount\": 1200\n}"
+                }
+            }
+        }
+    ]
+}
